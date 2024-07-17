@@ -1,0 +1,43 @@
+name: DAST LAB Env
+
+on:
+  pull_request:
+    branches:
+      - master
+      -  main
+  workflow_dispatch:
+  
+jobs:
+  dast:
+    runs-on: ubuntu-latest
+    name: DAST on Prem Testing Action
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - name: Create Output folder
+        run: mkdir ${{ github.workspace }}/output_fold
+      - name: Change dir owner
+        run: sudo chown -R 1000:1000 ${{ github.workspace }}
+      - name: Checkmarx DAST Github Action
+        uses: Checkmarx/dast-github-action@v1.0.6
+        env:
+          CX_APIKEY: <<API KEY>>
+        with:
+          command: web
+          config: dast-config/zap_config.yaml
+          environment_id: dev
+          fail_on: "HIGH"
+          log_level: info
+          base_url: https://us.ast.checkmarx.net/
+          verbose: true
+          timeout: 100000
+          output: ${{ github.workspace }}/output_fold
+      - name: Change dir owner back to gh user
+        if: always()
+        run: sudo chown -R 1001:1001 ${{ github.workspace }}/output_fold  
+      - uses: actions/upload-artifact@v3
+        if: always()
+        name: Upload Logs
+        with:
+          name: report
+          path: ${{ github.workspace }}/output_fold
